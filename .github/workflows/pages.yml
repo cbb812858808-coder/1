@@ -27,6 +27,10 @@ jobs:
         run: python scripts/build_history_public.py
       - name: Verify historical K-lines
         run: python -c "import json; d=json.load(open('data/history.json',encoding='utf8')); n=len(d.get('stocks',{})); print('history stocks:',n); assert n >= 50, 'history snapshot is incomplete'"
+      - name: Build AI technical scores
+        run: python scripts/build_ai_score.py
+      - name: Verify AI scores
+        run: python -c "import json; d=json.load(open('data/ai_scores.json',encoding='utf8')); n=len(d.get('stocks',[])); print('AI scored:',n); assert n >= 50, 'AI score snapshot is incomplete'"
       - name: Upload market data
         uses: actions/upload-artifact@v4
         with:
@@ -47,7 +51,7 @@ jobs:
           name: market-snapshot
           path: data
       - name: Verify Pages data
-        run: test -s data/market.json && test -s data/history.json
+        run: test -s data/market.json && test -s data/history.json && test -s data/ai_scores.json
       - uses: actions/configure-pages@v5
         with: {enablement: true}
       - uses: actions/upload-pages-artifact@v3
