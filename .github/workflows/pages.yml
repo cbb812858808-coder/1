@@ -4,7 +4,7 @@ on:
     branches: [main]
   workflow_dispatch:
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 concurrency:
@@ -13,7 +13,6 @@ concurrency:
 jobs:
   market:
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -21,10 +20,17 @@ jobs:
       - name: Install market data adapter
         run: pip install -q akshare pandas requests
       - name: Build public market snapshot
-        continue-on-error: true
         run: python scripts/build_market_public.py
-      - name: Upload market snapshot for Pages
-        if: hashFiles('data/market.json') != ''
+      - name: Verify market snapshot
+        run: python - <<'PY'
+          import json
+          p='data/market.json'
+          d=json.load(open(p,encoding='utf8'))
+          n=len(d.get('stocks',[]))
+          print('market rows:',n,'source:',d.get('source'))
+          assert n >= 1000, 'market snapshot is incomplete'
+          PY
+      - name: Upload market snapshot
         uses: actions/upload-artifact@v4
         with:
           name: market-snapshot
@@ -38,12 +44,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Download market snapshot into Pages bundle
-        continue-on-error: true
+      - name: Download market snapshot
         uses: actions/download-artifact@v4
         with:
           name: market-snapshot
           path: data
+      - name: Verify Pages market file
+        run: test -s data/market.json
       - uses: actions/configure-pages@v5
         with: {enablement: true}
       - uses: actions/upload-pages-artifact@v3
