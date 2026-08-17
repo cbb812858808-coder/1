@@ -22,14 +22,7 @@ jobs:
       - name: Build public market snapshot
         run: python scripts/build_market_public.py
       - name: Verify market snapshot
-        run: python - <<'PY'
-          import json
-          p='data/market.json'
-          d=json.load(open(p,encoding='utf8'))
-          n=len(d.get('stocks',[]))
-          print('market rows:',n,'source:',d.get('source'))
-          assert n >= 1000, 'market snapshot is incomplete'
-          PY
+        run: python -c "import json; d=json.load(open('data/market.json',encoding='utf8')); n=len(d.get('stocks',[])); print('market rows:',n,'source:',d.get('source')); assert n >= 1000, 'market snapshot is incomplete'"
       - name: Upload market snapshot
         uses: actions/upload-artifact@v4
         with:
