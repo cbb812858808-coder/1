@@ -17,17 +17,21 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with: {python-version: '3.11'}
-      - name: Install market data adapter
+      - name: Install data adapters
         run: pip install -q akshare pandas requests
       - name: Build public market snapshot
         run: python scripts/build_market_public.py
       - name: Verify market snapshot
         run: python -c "import json; d=json.load(open('data/market.json',encoding='utf8')); n=len(d.get('stocks',[])); print('market rows:',n,'source:',d.get('source')); assert n >= 1000, 'market snapshot is incomplete'"
-      - name: Upload market snapshot
+      - name: Build historical K-lines
+        run: python scripts/build_history_public.py
+      - name: Verify historical K-lines
+        run: python -c "import json; d=json.load(open('data/history.json',encoding='utf8')); n=len(d.get('stocks',{})); print('history stocks:',n); assert n >= 50, 'history snapshot is incomplete'"
+      - name: Upload market data
         uses: actions/upload-artifact@v4
         with:
           name: market-snapshot
-          path: data/market.json
+          path: data
           retention-days: 1
   deploy:
     needs: market
@@ -37,13 +41,13 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Download market snapshot
+      - name: Download market data
         uses: actions/download-artifact@v4
         with:
           name: market-snapshot
           path: data
-      - name: Verify Pages market file
-        run: test -s data/market.json
+      - name: Verify Pages data
+        run: test -s data/market.json && test -s data/history.json
       - uses: actions/configure-pages@v5
         with: {enablement: true}
       - uses: actions/upload-pages-artifact@v3
